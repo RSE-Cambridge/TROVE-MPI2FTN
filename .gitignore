@@ -1,0 +1,3 @@
+*.o
+*.mod
+trove_mpi2ftn.x
