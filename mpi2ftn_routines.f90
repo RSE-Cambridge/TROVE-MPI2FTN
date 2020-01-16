@@ -61,6 +61,7 @@ module mpi2ftn_routines
     end subroutine mmap_file
 
 #ifdef IFORT
+    ! ftell 'just works' with GNU, Intel needs some imports and specific i8 routine...
     function ftell(handle) result(pos)
       integer       :: handle
       integer(hik)  :: pos
@@ -90,6 +91,10 @@ module mpi2ftn_routines
       type(c_ptr)   :: matelem_mapped_c
       character(len=1), pointer,dimension(:)  :: matelem_mapped
 
+      ! Intel has issues with mmap...
+      real(rk),dimension(:,:),allocatable     :: matelem
+      integer(ik),dimension(:,:),allocatable  :: contr_dat
+
       !! Get some metadata
       open(unit = iounit, action = 'read',status='old', file = "eigen_quanta0.chk" )
 
@@ -102,12 +107,13 @@ module mpi2ftn_routines
       write(*,*) Maxsymcoeffs, max_deg_size, Maxcontracts, nclasses
       !! END Get some metadata
 
-      !! MMAP the main contr_matelem
-      filename = "contr_matelem.chk"//char(0)
-      filesize = get_mmapped_file_length(filename)
-      call mmap_file(filename, matelem_mapped_c)
-      call c_f_pointer(matelem_mapped_c, matelem_mapped, [filesize])
-      !! END MMAP the main contr_matelem
+      ! Intel has issues with mmap...
+      !!! MMAP the main contr_matelem
+      !filename = "contr_matelem.chk"//char(0)
+      !filesize = get_mmapped_file_length(filename)
+      !call mmap_file(filename, matelem_mapped_c)
+      !call c_f_pointer(matelem_mapped_c, matelem_mapped, [filesize])
+      !!! END MMAP the main contr_matelem
 
       open(unit = matelem_in, action = 'read', status = 'old', access='stream', file = 'contr_matelem.chk')
       open(unit = matelem_out, action = 'write', status = 'replace', position = 'rewind', form = 'unformatted', &
@@ -128,36 +134,52 @@ module mpi2ftn_routines
       if (buf(1:10)/='icontr_cnu') stop "contr_matelem.chk - expected 'icontr_cnu', found garbage"
       write(matelem_out) buf(1:10)
 
-      offset = ftell(matelem_in)
+      ! Intel has issues with mmap...
+      !offset = ftell(matelem_in)
 
-      write(matelem_out) matelem_mapped(offset:offset+ik*((1+nclasses)*ncontr_t))
+      !write(matelem_out) matelem_mapped(offset:offset+ik*((1+nclasses)*ncontr_t))
 
-      call fseek(matelem_in, ik*((1+nclasses)*ncontr_t), 1, ierr)
+      !call fseek(matelem_in, ik*((1+nclasses)*ncontr_t), 1, ierr)
+      allocate(contr_dat(1+nclasses,ncontr_t), stat=ierr)
+      read(matelem_in) contr_dat
+      write(matelem_out) contr_dat
 
       read(matelem_in) buf(1:11)
       if (buf(1:11)/='icontr_ideg') stop "contr_matelem.chk - expected 'icontr_ideg', found garbage"
       write(matelem_out) buf(1:11)
 
-      offset = ftell(matelem_in)
+      ! Intel has issues with mmap...
+      !offset = ftell(matelem_in)
 
-      write(matelem_out) matelem_mapped(offset:offset+ik*((1+nclasses)*ncontr_t))
+      !write(matelem_out) matelem_mapped(offset:offset+ik*((1+nclasses)*ncontr_t))
 
-      call fseek(matelem_in, ik*((1+nclasses)*ncontr_t), 1, ierr)
+      !call fseek(matelem_in, ik*((1+nclasses)*ncontr_t), 1, ierr)
+      read(matelem_in) contr_dat
+      write(matelem_out) contr_dat
+      deallocate(contr_dat, stat=ierr)
 
+      !hvib
       read(matelem_in) buf(1:4)
       write(matelem_out) buf(1:4)
 
-      offset = ftell(matelem_in)
+      ! Intel has issues with mmap...
+      !offset = ftell(matelem_in)
 
-      readsize = int(rk, hik)
-      readsize = readsize * ncontr_t * ncontr_t
+      !readsize = int(rk, hik)
+      !readsize = readsize * ncontr_t * ncontr_t
 
-      write(out,*) "Read size: ", readsize
-      write(out,*) "End position: ", offset + readsize
+      !write(out,*) "Read size: ", readsize
+      !write(out,*) "End position: ", offset + readsize
 
-      write(matelem_out) matelem_mapped(offset:offset+(readsize))
+      !write(matelem_out) matelem_mapped(offset:offset+(readsize))
 
-      call fseek(matelem_in, readsize, 1, ierr)
+      !call fseek(matelem_in, readsize, 1, ierr)
+
+      !hvib data
+      allocate(matelem(ncontr_t,ncontr_t), stat=ierr)
+      read(matelem_in) matelem
+      write(matelem_out) matelem
+      deallocate(matelem, stat=ierr)
 
       read(matelem_in) buf(1:16)
       if (buf(1:16)/='End Kinetic part') stop "contr_matelem.chk - corrupt footer"
@@ -207,14 +229,17 @@ module mpi2ftn_routines
         integer                                 :: taglength
         integer                                 :: ierr
 
+        ! Intel has issues with mmap...
+        real(rk),dimension(:,:),allocatable     :: matelem
 
         write(num_str, '(i2)') num
         filename_in = prefix//trim(adjustl(num_str))//".chk"//char(0)
         filename_out = prefix//trim(adjustl(num_str))//".chk.oldfmt"
 
-        filesize = get_mmapped_file_length(filename_in)
-        call mmap_file(filename_in, slice_mapped_c)
-        call c_f_pointer(slice_mapped_c, slice_mapped, [filesize])
+        ! Intel has issues with mmap...
+        !filesize = get_mmapped_file_length(filename_in)
+        !call mmap_file(filename_in, slice_mapped_c)
+        !call c_f_pointer(slice_mapped_c, slice_mapped, [filesize])
 
         taglength = len(tag)
 
@@ -226,18 +251,23 @@ module mpi2ftn_routines
         read(slice_in) tagbuf(1:taglength)
         write(slice_out) tagbuf(1:taglength)
 
-        offset = ftell(slice_in)
+        ! Intel has issues with mmap...
+        !offset = ftell(slice_in)
 
-        writesize = int(rk, hik)
-        writesize = writesize * ncontr * ncontr
+        !writesize = int(rk, hik)
+        !writesize = writesize * ncontr * ncontr
 
-        write(out,*) "Write size: ", writesize, int(rk,hik), ncontr
-        write(out,*) "End position: ", offset + writesize
+        !write(out,*) "Write size: ", writesize, int(rk,hik), ncontr
+        !write(out,*) "End position: ", offset + writesize
 
+        !write(slice_out) slice_mapped(offset:offset+writesize)
 
-        write(slice_out) slice_mapped(offset:offset+writesize)
+        !call fseek(slice_in, writesize, 1, ierr)
 
-        call fseek(slice_in, writesize, 1, ierr)
+        allocate(matelem(ncontr_t,ncontr_t), stat=ierr)
+        read(slice_in) matelem
+        write(slice_out) matelem
+        deallocate(matelem, stat=ierr)
 
         read(slice_in) tagbuf(1:taglength)
         if (tagbuf(1:taglength)/=tag) write(*,*) "Closing tag incorrect: ", tagbuf(1:taglength), " but expected ", tag

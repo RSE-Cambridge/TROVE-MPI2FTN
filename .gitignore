@@ -1,3 +1,4 @@
 *.o
 *.mod
 trove_mpi2ftn.x
+trove_mpi2ftn.gnu.x

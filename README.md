@@ -9,16 +9,14 @@ Fortran compilers. MPI compiler/library not required.
 
 # Status
 
-```
-Currently implemented: 
-- Convert split-file output
-- Hard-coded/tested only with H2CO-1 right now
-- Tested compatibility with non-MPIIO TRconvert_matel_j0_eigen (trove/tran.f90)
+This version of the code requieres system RAM to be larger than the size of a
+matrix slice, since the entire slice must be read into memory before being
+written to the new file. The `mmap_branch` git branch contains a version that
+uses MMAP to write directly from file to file, avoiding the need to store the
+entire matrix in RAM. However, this only works with GCC - the Intel compiled
+code insists on buffering the entire array into memory before even starting to
+write out to file.
 
-TODO:
-- Implement non-split output (+ autodetect)
-- Generalise
-- Ensure compatibility with large files
-- Clean up diagnostics/error checking
-- Get rid of `ifport` module requirement
-```
+# TODO
+
+ - Resolve Intel MMAP issues.
