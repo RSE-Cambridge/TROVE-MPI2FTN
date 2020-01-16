@@ -200,9 +200,9 @@ module mpi2ftn_routines
       do islice=10,12 !g_cor
         call conv_slice('matelem', islice, 'g_cor', ncontr_t)
       end do
-      do islice=1,3 !extF
-        call conv_slice('extmatelem', islice, 'extF', ncontr_t)
-      end do
+      !do islice=1,3 !extF
+      !  call conv_slice('extmatelem', islice, 'extF', ncontr_t)
+      !end do
 
     contains
 

@@ -5,7 +5,8 @@ Fortran compilers. MPI compiler/library not required.
 
 # Make and run
 
-`make` to build. To run, execute `trove_mpi2ftn.x` in TROVE output directories
+`make` to build Intel version, `make gnu` to build with gcc. To run, execute
+`trove_mpi2ftn.x` in TROVE output directory.
 
 # Status
 
@@ -17,6 +18,10 @@ entire matrix in RAM. However, this only works with GCC - the Intel compiled
 code insists on buffering the entire array into memory before even starting to
 write out to file.
 
+Until autodetection has been implemented, the number of `extmatelem*.chk` files
+will have to be hard-coded in `mpi2ftn_routines.f90` (search for `!extF`).
+
 # TODO
 
  - Resolve Intel MMAP issues.
+ - Autodetect number of `extmatelem*.chk` files
