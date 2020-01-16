@@ -17,9 +17,10 @@
 !
 module mpi2ftn_routines
   use iso_c_binding
-  use ifport, only:ftelli8
-  use mpi_f08
   use accuracy
+#ifdef IFORT
+  use ifport, only: ftelli8
+#endif
 
   implicit none
 
@@ -59,11 +60,21 @@ module mpi2ftn_routines
       handle = do_mmap(filename)
     end subroutine mmap_file
 
+#ifdef IFORT
+    function ftell(handle) result(pos)
+      integer       :: handle
+      integer(hik)  :: pos
+
+      pos = ftelli8(handle)
+    end function ftell
+#endif
+
     ! Structure stole form restore_rot_kinetic_matrix_elements in trove/tran.f90
     subroutine convert_matelem()
 
       integer(ik)        :: islice
       character(len=25)  :: buf
+      character(len=35)  :: filename
       integer(ik)        :: ncontr_t
       integer(ik) :: ierr
 
@@ -74,6 +85,7 @@ module mpi2ftn_routines
 
       integer(selected_int_kind(16))  :: filesize
       integer(hik)  :: offset
+      integer(hik)  :: readsize
 
       type(c_ptr)   :: matelem_mapped_c
       character(len=1), pointer,dimension(:)  :: matelem_mapped
@@ -91,12 +103,13 @@ module mpi2ftn_routines
       !! END Get some metadata
 
       !! MMAP the main contr_matelem
-      filesize = get_mmapped_file_length("contr_matelem.chk")
-      call mmap_file("contr_matelem.chk", matelem_mapped_c)
+      filename = "contr_matelem.chk"//char(0)
+      filesize = get_mmapped_file_length(filename)
+      call mmap_file(filename, matelem_mapped_c)
       call c_f_pointer(matelem_mapped_c, matelem_mapped, [filesize])
       !! END MMAP the main contr_matelem
 
-      open(unit = matelem_in, action = 'read', status = 'old', access='stream', form = 'binary', file = 'contr_matelem.chk')
+      open(unit = matelem_in, action = 'read', status = 'old', access='stream', file = 'contr_matelem.chk')
       open(unit = matelem_out, action = 'write', status = 'replace', position = 'rewind', form = 'unformatted', &
         & file = 'contr_matelem.chk.oldfmt')
 
@@ -115,7 +128,7 @@ module mpi2ftn_routines
       if (buf(1:10)/='icontr_cnu') stop "contr_matelem.chk - expected 'icontr_cnu', found garbage"
       write(matelem_out) buf(1:10)
 
-      offset = ftelli8(matelem_in)
+      offset = ftell(matelem_in)
 
       write(matelem_out) matelem_mapped(offset:offset+ik*((1+nclasses)*ncontr_t))
 
@@ -125,7 +138,7 @@ module mpi2ftn_routines
       if (buf(1:11)/='icontr_ideg') stop "contr_matelem.chk - expected 'icontr_ideg', found garbage"
       write(matelem_out) buf(1:11)
 
-      offset = ftelli8(matelem_in)
+      offset = ftell(matelem_in)
 
       write(matelem_out) matelem_mapped(offset:offset+ik*((1+nclasses)*ncontr_t))
 
@@ -134,11 +147,17 @@ module mpi2ftn_routines
       read(matelem_in) buf(1:4)
       write(matelem_out) buf(1:4)
 
-      offset = ftelli8(matelem_in)
+      offset = ftell(matelem_in)
 
-      write(matelem_out) matelem_mapped(offset:offset+rk*(ncontr_t*ncontr_t))
+      readsize = int(rk, hik)
+      readsize = readsize * ncontr_t * ncontr_t
 
-      call fseek(matelem_in, rk*(ncontr_t*ncontr_t), 1, ierr)
+      write(out,*) "Read size: ", readsize
+      write(out,*) "End position: ", offset + readsize
+
+      write(matelem_out) matelem_mapped(offset:offset+(readsize))
+
+      call fseek(matelem_in, readsize, 1, ierr)
 
       read(matelem_in) buf(1:16)
       if (buf(1:16)/='End Kinetic part') stop "contr_matelem.chk - corrupt footer"
@@ -199,7 +218,7 @@ module mpi2ftn_routines
 
         taglength = len(tag)
 
-        open(unit = slice_in, action = 'read', status = 'old', access='stream', form = 'binary', file = filename_in)
+        open(unit = slice_in, action = 'read', status = 'old', access='stream', file = filename_in)
         open(unit = slice_out, action = 'write', status = 'replace', position = 'rewind', form = 'unformatted', file = filename_out)
 
         write(*,*) "Converting slice: ", filename_in
@@ -207,8 +226,14 @@ module mpi2ftn_routines
         read(slice_in) tagbuf(1:taglength)
         write(slice_out) tagbuf(1:taglength)
 
-        offset = ftelli8(slice_in)
-        writesize = rk*ncontr*ncontr
+        offset = ftell(slice_in)
+
+        writesize = int(rk, hik)
+        writesize = writesize * ncontr * ncontr
+
+        write(out,*) "Write size: ", writesize, int(rk,hik), ncontr
+        write(out,*) "End position: ", offset + writesize
+
 
         write(slice_out) slice_mapped(offset:offset+writesize)
 
