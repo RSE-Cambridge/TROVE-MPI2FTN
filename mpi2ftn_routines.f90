@@ -130,7 +130,7 @@ module mpi2ftn_routines
 
       offset = ftell(matelem_in)
 
-      write(matelem_out) matelem_mapped(offset:offset+ik*((1+nclasses)*ncontr_t))
+      write(matelem_out) matelem_mapped(offset+1:offset+ik*((1+nclasses)*ncontr_t))
 
       call fseek(matelem_in, ik*((1+nclasses)*ncontr_t), 1, ierr)
 
@@ -140,7 +140,7 @@ module mpi2ftn_routines
 
       offset = ftell(matelem_in)
 
-      write(matelem_out) matelem_mapped(offset:offset+ik*((1+nclasses)*ncontr_t))
+      write(matelem_out) matelem_mapped(offset+1:offset+ik*((1+nclasses)*ncontr_t))
 
       call fseek(matelem_in, ik*((1+nclasses)*ncontr_t), 1, ierr)
 
@@ -152,16 +152,15 @@ module mpi2ftn_routines
       readsize = int(rk, hik)
       readsize = readsize * ncontr_t * ncontr_t
 
-      write(out,*) "Read size: ", readsize
-      write(out,*) "End position: ", offset + readsize
-
-      write(matelem_out) matelem_mapped(offset:offset+(readsize))
+      write(matelem_out) matelem_mapped(offset+1:offset+(readsize))
 
       call fseek(matelem_in, readsize, 1, ierr)
 
       read(matelem_in) buf(1:16)
-      if (buf(1:16)/='End Kinetic part') stop "contr_matelem.chk - corrupt footer"
-      write(matelem_out) buf(1:16)
+      write(out,*) buf(1:16)
+      !if (buf(1:16)/='End Kinetic part') stop "contr_matelem.chk - corrupt footer"
+      write(out,*) "End: ", buf(1:16)
+      write(matelem_out) 'End Kinetic part'
 
       close(matelem_out)
       close(matelem_in)
@@ -178,9 +177,9 @@ module mpi2ftn_routines
       do islice=10,12 !g_cor
         call conv_slice('matelem', islice, 'g_cor', ncontr_t)
       end do
-      do islice=1,3 !extF
-        call conv_slice('extmatelem', islice, 'extF', ncontr_t)
-      end do
+      !do islice=1,3 !extF
+      !  call conv_slice('extmatelem', islice, 'extF', ncontr_t)
+      !end do
 
     contains
 
@@ -231,11 +230,7 @@ module mpi2ftn_routines
         writesize = int(rk, hik)
         writesize = writesize * ncontr * ncontr
 
-        write(out,*) "Write size: ", writesize, int(rk,hik), ncontr
-        write(out,*) "End position: ", offset + writesize
-
-
-        write(slice_out) slice_mapped(offset:offset+writesize)
+        write(slice_out) slice_mapped(offset+1:offset+writesize)
 
         call fseek(slice_in, writesize, 1, ierr)
 
@@ -251,4 +246,5 @@ module mpi2ftn_routines
       end subroutine conv_slice
 
     end subroutine convert_matelem
+
 end module mpi2ftn_routines
