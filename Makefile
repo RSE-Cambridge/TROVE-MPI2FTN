@@ -3,7 +3,7 @@ all: intel
 intel:
 	icc -g3 -traceback -c mmap_util.c
 	ifort -g3 -traceback -c accuracy.f90
-	ifort -g3 -traceback -cpp -c -DIFORT mpi2ftn_routines.f90
+	ifort -g3 -traceback -cpp -c mpi2ftn_routines.f90
 	ifort -g3 -traceback -o trove_mpi2ftn.x trove_mpi2ftn.f90 mpi2ftn_routines.o accuracy.o mmap_util.o
 
 gnu:
