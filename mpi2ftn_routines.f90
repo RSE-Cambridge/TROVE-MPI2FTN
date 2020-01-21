@@ -187,8 +187,8 @@ module mpi2ftn_routines
 
       close(matelem_out)
       close(matelem_in)
-      ierr = munmap(matelem_mapped_c, filesize)
-      nullify(matelem_mapped)
+      !ierr = munmap(matelem_mapped_c, filesize)
+      !nullify(matelem_mapped)
 
       write(*,*) "Converting slices..."
 
@@ -275,8 +275,8 @@ module mpi2ftn_routines
 
         close(slice_out)
         close(slice_in)
-        ierr = munmap(slice_mapped_c, filesize)
-        nullify(slice_mapped)
+        !ierr = munmap(slice_mapped_c, filesize)
+        !nullify(slice_mapped)
 
       end subroutine conv_slice
 
