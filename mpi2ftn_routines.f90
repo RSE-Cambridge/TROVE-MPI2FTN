@@ -60,24 +60,25 @@ module mpi2ftn_routines
 #endif
 
     ! Structure stole form restore_rot_kinetic_matrix_elements in trove/tran.f90
-    subroutine convert_matelem()
+    subroutine convert_matelem(extslices)
 
-      integer(ik)        :: islice
-      character(len=25)  :: buf
-      character(len=35)  :: filename
-      integer(ik)        :: ncontr_t
-      integer(ik) :: ierr
+      integer(ik),optional                    :: extslices
 
-      integer(ik) :: Maxsymcoeffs, max_deg_size, Maxcontracts, nclasses
-      integer(ik) :: iounit = 1000, matelem_in = 1001, matelem_out = 1002
-      integer(ik) :: verbose = 7
+      integer(ik)                             :: islice
+      character(len=25)                       :: buf
+      character(len=35)                       :: filename
+      integer(ik)                             :: ncontr_t
+      integer(ik)                             :: ierr
+
+      integer(ik)                             :: Maxsymcoeffs, max_deg_size, Maxcontracts, nclasses
+      integer(ik)                             :: iounit = 1000, matelem_in = 1001, matelem_out = 1002
 
 
-      integer(selected_int_kind(16))  :: filesize
-      integer(hik)  :: offset
-      integer(hik)  :: readsize
+      integer(selected_int_kind(16))          :: filesize
+      integer(hik)                            :: offset
+      integer(hik)                            :: readsize
 
-      type(c_ptr)   :: matelem_mapped_c
+      type(c_ptr)                             :: matelem_mapped_c
       character(len=1), pointer,dimension(:)  :: matelem_mapped
 
       !! Get some metadata
@@ -166,12 +167,19 @@ module mpi2ftn_routines
       do islice=1,9 !g_rot
         call conv_slice('matelem', islice, 'g_rot', ncontr_t)
       end do
+
       do islice=10,12 !g_cor
         call conv_slice('matelem', islice, 'g_cor', ncontr_t)
       end do
-      !do islice=1,3 !extF
-      !  call conv_slice('extmatelem', islice, 'extF', ncontr_t)
-      !end do
+      
+      ! Only convert extF slices if parameter is present
+      if (present(extslices)) then
+        if (extslices .lt. 1) return
+
+        do islice=1,extslices !extF
+          call conv_slice('extmatelem', islice, 'extF', ncontr_t)
+        end do
+      endif
 
     contains
 
