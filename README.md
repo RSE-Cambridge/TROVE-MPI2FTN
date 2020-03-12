@@ -4,8 +4,13 @@ Converts TROVE-MPI output files to old format. MPI compiler/library not required
 
 # Make and run
 
-`make` to build GCC version, `make intel` to build with Intel compilers. To run,
-execute `trove_mpi2ftn.x` in TROVE output directory.
+`make` to build GCC version (recommended), `make intel` to build with Intel compilers. To run,
+execute the following command in the TROVE output directory:
+
+`trove_mpi2ftn.x <number_of_extmatelem_slices>`
+
+The `number_of_extmatelem_slices` parameter is optional, but auto-detection of
+the number of `extmatelem.chk` files has not yet been implemented.
 
 # Status
 
